@@ -1,0 +1,100 @@
+name: android-build-actions-workflow
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+      
+permissions:
+    contents: write
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    env:
+      tagName: v1.7.0
+    steps:
+      # - name: git clone
+      #   run: |
+      #     git clone --recursive https://git.code.sf.net/p/opencamera/code opencamera &&
+      #     cd opencamera &&
+      #     git checkout "${{ env.tagName }}" &&
+      #     ls -R
+      - uses: actions/checkout@v4
+        with:
+          # Repository name with owner. For example, actions/checkout
+          # Default: ${{ github.repository }}
+          repository: 'maks/MGit'
+          ref: ${{ env.tagName }}
+          path: 'mgit'
+
+#      - name: Get Last Commit Date
+#        id: date
+#        run: echo "::set-output name=date::$(git log -1 --format="%at" | xargs -I{} date -d @{} +%Y%m%d_%H%M%S)"
+
+#     - name: Get Changelog
+#       id: changelog
+#       run: |
+#         CHANGELOG_ENV=$(git log --pretty=format:"%an: %s" | ./scripts/filter_changelog.py | jq --raw-input --slurp '.' | sed 's/^\"\"$/CANCEL/g')
+#         echo "$CHANGELOG_ENV"
+#         echo "::set-output name=RELEASE_BODY::$CHANGELOG_ENV"
+#     - name: Debug
+#       run: |
+#         echo "RELEASE_BODY: " ${{ steps.changelog.outputs.RELEASE_BODY }}
+        
+#     - name: Kick off Cancelling(if need)
+#       uses: andymckay/cancel-action@0.2
+#       if: steps.changelog.outputs.RELEASE_BODY == 'CANCEL'
+
+#     - name: Waiting for Cancellation
+#       run: sleep 30
+#       if: steps.changelog.outputs.RELEASE_BODY == 'CANCEL'
+
+#    - uses: actions/cache@v2
+#      with:
+#        path: |
+#          ~/.gradle/caches
+#          ~/.gradle/wrapper
+#        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+#        restore-keys: |
+#          ${{ runner.os }}-gradle-
+          
+      - name: set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 11
+
+      # - name: Setup Android SDK
+      #   uses: android-actions/setup-android@v2.0.10
+
+      # - name: Build with Gradle
+      #   run: cd File-Manager && chmod 777 ./gradlew && ./gradlew --no-daemon assembleFossRelease
+
+      - name: Build with Gradle
+        working-directory: mgit
+        run: ./gradlew --no-daemon clean assembleDebug testDebug
+      
+      - working-directory: mgit/app/build/outputs/apk
+        run: |
+          ls -R
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          path: '*.apk'
+          directory: 'mgit/app/build/outputs/apk/release'
+          filename: "${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
+          
+      - name: Release prebuilt
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "mgit/app/build/outputs/apk/release/${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
