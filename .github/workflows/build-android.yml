@@ -78,7 +78,7 @@ jobs:
 
       - name: Build with Gradle
         working-directory: mgit
-        run: ./gradlew --no-daemon clean assembleRelease
+        run: ./gradlew --no-daemon clean assembleDebug testDebug
       
       - working-directory: mgit/app/build/outputs/apk
         run: |
@@ -89,12 +89,12 @@ jobs:
         with:
           type: 'zip'
           path: '*.apk'
-          directory: 'mgit/app/build/outputs/apk/release'
+          directory: 'mgit/app/build/outputs/apk/debug'
           filename: "${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
           
       - name: Release prebuilt
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "mgit/app/build/outputs/apk/release/${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
+          artifacts: "mgit/app/build/outputs/apk/debug/${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
           allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
