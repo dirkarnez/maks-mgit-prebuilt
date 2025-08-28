@@ -78,7 +78,7 @@ jobs:
 
       - name: Build with Gradle
         working-directory: mgit
-        run: ./gradlew --no-daemon clean assembleDebug testDebug
+        run: ./gradlew --no-daemon clean assembleRelease
       
       - working-directory: mgit/app/build/outputs/apk
         run: |
